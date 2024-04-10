@@ -69,8 +69,7 @@ class Fennel:
         if self.Bearer is not None:
             if self._verify_login():
                 return True
-            else:
-                self._clear_credentials()
+            self._clear_credentials()
         if code is None:
             url = self.endpoints.retrieve_bearer_url()
             payload = {
@@ -103,7 +102,6 @@ class Fennel:
         self.Bearer = response['access_token']
         self.Refresh = response['refresh_token']
         self.ID_Token = response['id_token']
-        # refresh_token() # Refresh token after login?
         self._save_credentials()
         return True
 
@@ -129,12 +127,12 @@ class Fennel:
         try:
             self.get_portfolio_summary()
             return True
-        except Exception as e:
+        except Exception:
             self.refresh_token()
             try:
                 self.get_portfolio_summary()
                 return True
-            except Exception as e:
+            except Exception:
                 return False
 
     @check_login

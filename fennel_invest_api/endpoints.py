@@ -13,7 +13,9 @@ class Endpoints:
     def oauth_url(self):
         return f"{self.accounts}/oauth/token"
 
-    def build_graphql_payload(self, query, variables={}):
+    def build_graphql_payload(self, query, variables=None):
+        if variables is None:
+            variables = {}
         return {
             "operationName": None,
             "variables": variables,
