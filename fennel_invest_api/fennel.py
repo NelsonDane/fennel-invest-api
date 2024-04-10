@@ -106,7 +106,6 @@ class Fennel:
         # refresh_token() # Refresh token after login?
         self._save_credentials()
         return True
-        
 
     def refresh_token(self):
         url = self.endpoints.oauth_url()
@@ -154,4 +153,37 @@ class Fennel:
         response = self.session.post(self.endpoints.graphql, headers=headers, data=query)
         if response.status_code != 200:
             raise Exception(f"Stock Holdings Request failed with status code {response.status_code}: {response.text}")
-        return response.json()
+        response = response.json()
+        return response['data']['portfolio']['bulbs']
+
+    @check_login
+    def is_market_open(self):
+        query = self.endpoints.is_market_open_query()
+        headers = self.endpoints.build_headers(self.Bearer)
+        response = self.session.post(self.endpoints.graphql, headers=headers, data=query)
+        if response.status_code != 200:
+            raise Exception(f"Market Open Request failed with status code {response.status_code}: {response.text}")
+        response = response.json()
+        return response['data']['securityMarketInfo']['isOpen']
+
+    @check_login
+    def place_order(self, ticker, quantity, side, price="market"):
+        if side.lower() not in ["buy", "sell"]:
+            raise Exception("Side must be either 'buy' or 'sell'")
+        # Check if market is open
+        if not self.is_market_open():
+            raise Exception("Market is closed. Cannot place order.")
+        # Search for stock "isin"
+        query = self.endpoints.stock_search_query(ticker)
+        headers = self.endpoints.build_headers(self.Bearer)
+        search_response = self.session.post(self.endpoints.graphql, headers=headers, data=query)
+        if search_response.status_code != 200:
+            raise Exception(f"Stock Search Request failed with status code {search_response.status_code}: {search_response.text}")
+        search_response = search_response.json()
+        isin = search_response['data']['searchSearch']['searchSecurities'][0]['isin']
+        # Place order
+        query = self.endpoints.stock_order_query(ticker, quantity, isin, side, price)
+        order_response = self.session.post(self.endpoints.graphql, headers=headers, data=query)
+        if order_response.status_code != 200:
+            raise Exception(f"Order Request failed with status code {order_response.status_code}: {order_response.text}")
+        return order_response.json()

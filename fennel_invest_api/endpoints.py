@@ -13,10 +13,10 @@ class Endpoints:
     def oauth_url(self):
         return f"{self.accounts}/oauth/token"
 
-    def build_graphql_payload(self, query):
+    def build_graphql_payload(self, query, variables={}):
         return {
             "operationName": None,
-            "variables": {},
+            "variables": variables,
             "query": query
         }
 
@@ -64,6 +64,53 @@ class Endpoints:
             }
         """
         return json.dumps(self.build_graphql_payload(query))
+
+    def is_market_open_query(self):
+        query = """
+            query MarketHours {
+                securityMarketInfo {
+                    isOpen
+                }
+            }
+        """
+        return json.dumps(self.build_graphql_payload(query))
+
+    def stock_search_query(self, symbol, count=5):
+        # idk what count is
+        query = """
+            query Search($query: String!, $count: Int) {
+                searchSearch {
+                    searchSecurities(query: $query, count: $count) {
+                        isin
+                    }
+                }
+            }
+        """
+        variables = {
+            "query": symbol,
+            "count": count
+        }
+        return json.dumps(self.build_graphql_payload(query, variables))
+
+    def stock_order_query(self, symbol, quantity, isin, side, priceRule):
+        query = """
+            mutation CreateOrder($order_details: OrderDetailsInput__!){
+                orderCreateOrder(order: $order_details)
+            }
+        """
+        variables = {
+            "order_details": {
+                "quantity": quantity,
+                "symbol": symbol,
+                "isin": isin,
+                "side": side,
+                "priceRule": priceRule,
+                "timeInForce": "day",
+                "routingOption": "exchange_ats_sdp",
+            }
+        }
+        return json.dumps(self.build_graphql_payload(query, variables))
+
 
     @staticmethod
     def build_headers(Bearer, graphql=True):
