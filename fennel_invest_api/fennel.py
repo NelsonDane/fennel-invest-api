@@ -11,6 +11,7 @@ def check_login(func):
         if self.Bearer is None:
             raise Exception("Bearer token is not set. Please login first.")
         return func(self, *args, **kwargs)
+
     return wrapper
 
 
@@ -22,7 +23,9 @@ class Fennel:
         self.Refresh = None
         self.ID_Token = None
         self.timeout = 10
-        self.account_number = "00000000" # Fennel only has 1 account which they don't share
+        self.account_number = (
+            "00000000"  # Fennel only has 1 account which they don't share
+        )
         self.client_id = "FXGlhcVdamwozAFp8BZ2MWl6coPl6agX"
         self.filename = filename
         self.path = None
@@ -35,7 +38,7 @@ class Fennel:
             self.filename = os.path.join(self.path, self.filename)
             if not os.path.exists(self.filename):
                 os.makedirs(self.path)
-        
+
     def _load_credentials(self):
         self._verify_filepath()
         if os.path.exists(self.filename):
@@ -45,16 +48,19 @@ class Fennel:
             self.Refresh = credentials.get("Refresh")
             self.ID_Token = credentials.get("ID_Token")
             self.client_id = credentials.get("client_id", self.client_id)
-        
+
     def _save_credentials(self):
         self._verify_filepath()
         with open(self.filename, "wb") as f:
-            pickle.dump({
-                "Bearer": self.Bearer,
-                "Refresh": self.Refresh,
-                "ID_Token": self.ID_Token,
-                "client_id": self.client_id
-            }, f)
+            pickle.dump(
+                {
+                    "Bearer": self.Bearer,
+                    "Refresh": self.Refresh,
+                    "ID_Token": self.ID_Token,
+                    "client_id": self.client_id,
+                },
+                f,
+            )
 
     def _clear_credentials(self):
         self._verify_filepath()
@@ -77,7 +83,7 @@ class Fennel:
                 "email": email,
                 "client_id": self.client_id,
                 "connection": "email",
-                "send": "code"
+                "send": "code",
             }
             response = self.session.post(url, json=payload)
             if response.status_code != 200:
@@ -94,15 +100,15 @@ class Fennel:
             "username": email,
             "scope": "openid profile offline_access email",
             "audience": "https://meta.api.fennel.com/graphql",
-            "realm": "email"
+            "realm": "email",
         }
         response = self.session.post(url, json=payload)
         if response.status_code != 200:
             raise Exception(f"Failed to login: {response.text}")
         response = response.json()
-        self.Bearer = response['access_token']
-        self.Refresh = response['refresh_token']
-        self.ID_Token = response['id_token']
+        self.Bearer = response["access_token"]
+        self.Refresh = response["refresh_token"]
+        self.ID_Token = response["id_token"]
         # refresh_token() # Refresh token after login?
         self._save_credentials()
         return True
@@ -113,15 +119,15 @@ class Fennel:
             "grant_type": "refresh_token",
             "client_id": self.client_id,
             "refresh_token": self.Refresh,
-            "scope": "openid profile offline_access email"
+            "scope": "openid profile offline_access email",
         }
         response = self.session.post(url, json=payload)
         if response.status_code != 200:
             raise Exception(f"Failed to refresh bearer token: {response.text}")
         response = response.json()
         self.Bearer = f"{response['access_token']}"
-        self.Refresh = response['refresh_token']
-        self.ID_Token = response['id_token']
+        self.Refresh = response["refresh_token"]
+        self.ID_Token = response["id_token"]
         return response
 
     def _verify_login(self):
@@ -141,30 +147,42 @@ class Fennel:
     def get_portfolio_summary(self):
         query = self.endpoints.portfolio_query()
         headers = self.endpoints.build_headers(self.Bearer)
-        response = self.session.post(self.endpoints.graphql, headers=headers, data=query)
+        response = self.session.post(
+            self.endpoints.graphql, headers=headers, data=query
+        )
         if response.status_code != 200:
-            raise Exception(f"Portfolio Request failed with status code {response.status_code}: {response.text}")
+            raise Exception(
+                f"Portfolio Request failed with status code {response.status_code}: {response.text}"
+            )
         return response.json()
-    
+
     @check_login
     def get_stock_holdings(self):
         query = self.endpoints.stock_holdings_query()
         headers = self.endpoints.build_headers(self.Bearer)
-        response = self.session.post(self.endpoints.graphql, headers=headers, data=query)
+        response = self.session.post(
+            self.endpoints.graphql, headers=headers, data=query
+        )
         if response.status_code != 200:
-            raise Exception(f"Stock Holdings Request failed with status code {response.status_code}: {response.text}")
+            raise Exception(
+                f"Stock Holdings Request failed with status code {response.status_code}: {response.text}"
+            )
         response = response.json()
-        return response['data']['portfolio']['bulbs']
+        return response["data"]["portfolio"]["bulbs"]
 
     @check_login
     def is_market_open(self):
         query = self.endpoints.is_market_open_query()
         headers = self.endpoints.build_headers(self.Bearer)
-        response = self.session.post(self.endpoints.graphql, headers=headers, data=query)
+        response = self.session.post(
+            self.endpoints.graphql, headers=headers, data=query
+        )
         if response.status_code != 200:
-            raise Exception(f"Market Open Request failed with status code {response.status_code}: {response.text}")
+            raise Exception(
+                f"Market Open Request failed with status code {response.status_code}: {response.text}"
+            )
         response = response.json()
-        return response['data']['securityMarketInfo']['isOpen']
+        return response["data"]["securityMarketInfo"]["isOpen"]
 
     @check_login
     def place_order(self, ticker, quantity, side, price="market"):
@@ -176,14 +194,22 @@ class Fennel:
         # Search for stock "isin"
         query = self.endpoints.stock_search_query(ticker)
         headers = self.endpoints.build_headers(self.Bearer)
-        search_response = self.session.post(self.endpoints.graphql, headers=headers, data=query)
+        search_response = self.session.post(
+            self.endpoints.graphql, headers=headers, data=query
+        )
         if search_response.status_code != 200:
-            raise Exception(f"Stock Search Request failed with status code {search_response.status_code}: {search_response.text}")
+            raise Exception(
+                f"Stock Search Request failed with status code {search_response.status_code}: {search_response.text}"
+            )
         search_response = search_response.json()
-        isin = search_response['data']['searchSearch']['searchSecurities'][0]['isin']
+        isin = search_response["data"]["searchSearch"]["searchSecurities"][0]["isin"]
         # Place order
         query = self.endpoints.stock_order_query(ticker, quantity, isin, side, price)
-        order_response = self.session.post(self.endpoints.graphql, headers=headers, data=query)
+        order_response = self.session.post(
+            self.endpoints.graphql, headers=headers, data=query
+        )
         if order_response.status_code != 200:
-            raise Exception(f"Order Request failed with status code {order_response.status_code}: {order_response.text}")
+            raise Exception(
+                f"Order Request failed with status code {order_response.status_code}: {order_response.text}"
+            )
         return order_response.json()
