@@ -33,16 +33,14 @@ class Fennel:
             self.path = path
         self._load_credentials()
 
-    def _verify_filepath(self):
-        if self.path is not None:
-            self.filename = os.path.join(self.path, self.filename)
-            if not os.path.exists(self.filename):
-                os.makedirs(self.path)
-
     def _load_credentials(self):
-        self._verify_filepath()
-        if os.path.exists(self.filename):
-            with open(self.filename, "rb") as f:
+        filename = self.filename
+        if self.path is not None:
+            filename = os.path.join(self.path, filename)
+            if not os.path.exists(self.path):
+                os.makedirs(self.path)
+        if os.path.exists(filename):
+            with open(filename, "rb") as f:
                 credentials = pickle.load(f)
             self.Bearer = credentials.get("Bearer")
             self.Refresh = credentials.get("Refresh")
@@ -50,8 +48,12 @@ class Fennel:
             self.client_id = credentials.get("client_id", self.client_id)
 
     def _save_credentials(self):
-        self._verify_filepath()
-        with open(self.filename, "wb") as f:
+        filename = self.filename
+        if self.path is not None:
+            filename = os.path.join(self.path, filename)
+            if not os.path.exists(self.path):
+                os.makedirs(self.path)
+        with open(filename, "wb") as f:
             pickle.dump(
                 {
                     "Bearer": self.Bearer,
@@ -63,9 +65,13 @@ class Fennel:
             )
 
     def _clear_credentials(self):
-        self._verify_filepath()
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
+        filename = self.filename
+        if self.path is not None:
+            filename = os.path.join(self.path, filename)
+            if not os.path.exists(self.path):
+                os.makedirs(self.path)
+        if os.path.exists(filename):
+            os.remove(filename)
         self.Bearer = None
         self.Refresh = None
         self.ID_Token = None
