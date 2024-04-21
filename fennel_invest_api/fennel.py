@@ -114,18 +114,20 @@ class Fennel:
         self.Bearer = response["access_token"]
         self.Refresh = response["refresh_token"]
         self.ID_Token = response["id_token"]
+        self.refresh_token()
         self._save_credentials()
         return True
 
     def refresh_token(self):
         url = self.endpoints.oauth_url()
+        headers = self.endpoints.build_headers(accounts_host=True)
         payload = {
             "grant_type": "refresh_token",
             "client_id": self.client_id,
             "refresh_token": self.Refresh,
             "scope": "openid profile offline_access email",
         }
-        response = self.session.post(url, json=payload)
+        response = self.session.post(url, json=payload, headers=headers)
         if response.status_code != 200:
             raise Exception(f"Failed to refresh bearer token: {response.text}")
         response = response.json()
@@ -140,8 +142,8 @@ class Fennel:
             self.get_portfolio_summary()
             return True
         except Exception:
-            self.refresh_token()
             try:
+                self.refresh_token()
                 self.get_portfolio_summary()
                 return True
             except Exception:
@@ -158,7 +160,7 @@ class Fennel:
             raise Exception(
                 f"Portfolio Request failed with status code {response.status_code}: {response.text}"
             )
-        return response.json()
+        return response.json()["data"]["portfolio"]
 
     @check_login
     def get_stock_holdings(self):
@@ -189,7 +191,7 @@ class Fennel:
         return response["data"]["securityMarketInfo"]["isOpen"]
 
     @check_login
-    def place_order(self, ticker, quantity, side, price="market"):
+    def place_order(self, ticker, quantity, side, price="market", dry_run=False):
         if side.lower() not in ["buy", "sell"]:
             raise Exception("Side must be either 'buy' or 'sell'")
         # Check if market is open
@@ -206,6 +208,8 @@ class Fennel:
                 f"Stock Search Request failed with status code {search_response.status_code}: {search_response.text}"
             )
         search_response = search_response.json()
+        if dry_run:
+            return search_response
         isin = search_response["data"]["searchSearch"]["searchSecurities"][0]["isin"]
         # Place order
         query = self.endpoints.stock_order_query(ticker, quantity, isin, side, price)

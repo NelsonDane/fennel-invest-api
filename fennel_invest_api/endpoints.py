@@ -108,15 +108,16 @@ class Endpoints:
         return json.dumps(self.build_graphql_payload(query, variables))
 
     @staticmethod
-    def build_headers(Bearer, graphql=True):
+    def build_headers(Bearer=None, accounts_host=False):
         headers = {
             "accept": "*/*",
             "accept-encoding": "gzip",
-            "authorization": f"Bearer {Bearer}",
             "content-type": "application/json",
             "host": "fennel-api.prod.fennel.com",
             "user-agent": "Dart/3.3 (dart:io)",
         }
-        if not graphql:
+        if Bearer is not None:
+            headers["authorization"] = f"Bearer {Bearer}"
+        if accounts_host:
             headers["host"] = "accounts.fennel.com"
         return headers
