@@ -101,7 +101,7 @@ class Fennel:
         payload = {
             "grant_type": "http://auth0.com/oauth/grant-type/passwordless/otp",
             "client_id": self.client_id,
-            "otp": code,
+            "otp": str(code),
             "username": email,
             "scope": "openid profile offline_access email",
             "audience": "https://meta.api.fennel.com/graphql",
