@@ -210,6 +210,8 @@ class Fennel:
         search_response = search_response.json()
         if dry_run:
             return search_response
+        if len(search_response["data"]["searchSearch"]["searchSecurities"]) == 0:
+            raise Exception(f"No stock found with ticker {ticker}. Please check the app to see if it is valid.")
         isin = search_response["data"]["searchSearch"]["searchSecurities"][0]["isin"]
         # Place order
         query = self.endpoints.stock_order_query(ticker, quantity, isin, side, price)
