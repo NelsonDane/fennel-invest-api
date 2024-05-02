@@ -24,13 +24,11 @@ fennel.login(
 )
 ```
 
-If you'd like to handle the 2FA yourself programmatically instead of waiting for `input()`, you can call it with `wait_for_2fa=False`, catch the 2FA exception, then call it again with the 2FA code:
-
+## Usage: Login to Fennel
+No need to add wait for 2fa, just enter the code in the command line when requested, and it will save credentials into the directory.
 ```python
 fennel.login(
     email="your-email@email.com",
-    wait_for_2fa=False
-    code="123456" # Should be six-digit integer from email
 )
 ```
 
@@ -50,7 +48,7 @@ print(portfolio)
 ## Usage: Placing Orders
 ```python
 order = fennel.place_order(
-    symbol="AAPL",
+    ticker="AAPL",
     quantity=1,
     side="buy", # Must be "buy" or "sell"
     price="market" # Only market orders are supported for now
