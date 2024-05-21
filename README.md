@@ -36,14 +36,21 @@ fennel.login(
 
 ## Usage: Get Stock Holdings
 ```python
-positions = fennel.get_stock_holdings()
-for position in positions:
-    print(position)
+account_ids = fennel.get_account_ids()
+for account_id in account_ids:
+    print(account_id)
+    positions = fennel.get_stock_holdings(account_id)
+    for position in positions:
+        print(position)
 ```
 
 ## Usage: Get Portfolio
 ```python
-portfolio = fennel.get_portfolio_summary()
+# For all accounts
+full_portfolio = fennel.get_full_accounts()
+print(full_portfolio)
+# For a single account ID
+portfolio = fennel.get_portfolio_summary(account_id)
 print(portfolio)
 ```
 
