@@ -229,7 +229,9 @@ class Fennel:
         return response["data"]["securityMarketInfo"]["isOpen"]
 
     @check_login
-    def place_order(self, account_id, ticker, quantity, side, price="market", dry_run=False):
+    def place_order(
+        self, account_id, ticker, quantity, side, price="market", dry_run=False
+    ):
         if side.lower() not in ["buy", "sell"]:
             raise Exception("Side must be either 'buy' or 'sell'")
         # Check if market is open
@@ -254,7 +256,9 @@ class Fennel:
             )
         isin = search_response["data"]["searchSearch"]["searchSecurities"][0]["isin"]
         # Place order
-        query = self.endpoints.stock_order_query(account_id, ticker, quantity, isin, side, price)
+        query = self.endpoints.stock_order_query(
+            account_id, ticker, quantity, isin, side, price
+        )
         order_response = self.session.post(
             self.endpoints.graphql, headers=headers, data=query
         )
