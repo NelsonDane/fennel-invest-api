@@ -130,7 +130,7 @@ class Fennel:
         if response.status_code != 200:
             raise Exception(f"Failed to refresh bearer token: {response.text}")
         response = response.json()
-        self.Bearer = f"{response['access_token']}"
+        self.Bearer = response["access_token"]
         self.Refresh = response["refresh_token"]
         self.ID_Token = response["id_token"]
         return response
