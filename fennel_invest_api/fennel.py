@@ -23,7 +23,7 @@ class Fennel:
         self.Refresh = None
         self.ID_Token = None
         self.timeout = 10
-        self.account_ids = [] # For multiple accounts
+        self.account_ids = []  # For multiple accounts
         self.client_id = "FXGlhcVdamwozAFp8BZ2MWl6coPl6agX"
         self.filename = filename
         self.path = None
