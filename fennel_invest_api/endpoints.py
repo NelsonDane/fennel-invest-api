@@ -145,10 +145,16 @@ class Endpoints:
         variables = {"query": symbol, "count": count}
         return json.dumps(self.build_graphql_payload(query, variables))
 
-    def stock_order_query(self, symbol, quantity, isin, side, priceRule):
+    def stock_order_query(self, account_id, symbol, quantity, isin, side, priceRule):
         query = """
-            mutation CreateOrder($order_details: OrderDetailsInput__!){
-                orderCreateOrder(order: $order_details)
+            mutation CreateOrder(
+                $order_details: OrderDetailsInput__!
+                $accountId: String!
+            ) {
+                createOrder(
+                    accountId: $accountId
+                    order: $order_details
+                )
             }
         """
         variables = {
@@ -160,7 +166,8 @@ class Endpoints:
                 "priceRule": priceRule,
                 "timeInForce": "day",
                 "routingOption": "exchange_ats_sdp",
-            }
+            },
+            "accountId": account_id,
         }
         return json.dumps(self.build_graphql_payload(query, variables))
 

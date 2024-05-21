@@ -57,6 +57,7 @@ print(portfolio)
 ## Usage: Placing Orders
 ```python
 order = fennel.place_order(
+    account_id=account_id,
     symbol="AAPL",
     quantity=1,
     side="buy", # Must be "buy" or "sell"
