@@ -23,9 +23,7 @@ class Fennel:
         self.Refresh = None
         self.ID_Token = None
         self.timeout = 10
-        self.account_number = (
-            "00000000"  # Fennel only has 1 account which they don't share
-        )
+        self.account_ids = [] # For multiple accounts
         self.client_id = "FXGlhcVdamwozAFp8BZ2MWl6coPl6agX"
         self.filename = filename
         self.path = None
@@ -116,6 +114,7 @@ class Fennel:
         self.ID_Token = response["id_token"]
         self.refresh_token()
         self._save_credentials()
+        self.get_account_ids()
         return True
 
     def refresh_token(self):
@@ -137,21 +136,60 @@ class Fennel:
         return response
 
     def _verify_login(self):
-        # Test login by getting portfolio summary
+        # Test login by getting Account IDs
         try:
-            self.get_portfolio_summary()
+            self.get_account_ids()
             return True
         except Exception:
             try:
                 self.refresh_token()
-                self.get_portfolio_summary()
+                self.get_account_ids()
                 return True
             except Exception:
                 return False
 
     @check_login
-    def get_portfolio_summary(self):
-        query = self.endpoints.portfolio_query()
+    def get_account_ids(self):
+        query = self.endpoints.account_ids_query()
+        headers = self.endpoints.build_headers(self.Bearer)
+        response = self.session.post(
+            self.endpoints.graphql, headers=headers, data=query
+        )
+        if response.status_code != 200:
+            raise Exception(
+                f"Account ID Check failed with status code {response.status_code}: {response.text}"
+            )
+        response = response.json()["data"]["user"]["accounts"]
+        response_list = sorted(response, key=lambda x: x["created"])
+        account_ids = []
+        for account in response_list:
+            if account["status"] == "APPROVED":
+                account_ids.append(account["id"])
+        self.account_ids = account_ids
+        return account_ids
+
+    @check_login
+    def get_full_accounts(self):
+        query = self.endpoints.list_full_accounts_query()
+        headers = self.endpoints.build_headers(self.Bearer)
+        response = self.session.post(
+            self.endpoints.graphql, headers=headers, data=query
+        )
+        if response.status_code != 200:
+            raise Exception(
+                f"Full Account Request failed with status code {response.status_code}: {response.text}"
+            )
+        response = response.json()["data"]["user"]["accounts"]
+        response_list = sorted(response, key=lambda x: x["created"])
+        approved_accounts = []
+        for account in response_list:
+            if account["status"] == "APPROVED":
+                approved_accounts.append(account)
+        return approved_accounts
+
+    @check_login
+    def get_portfolio_summary(self, account_id):
+        query = self.endpoints.portfolio_query(account_id)
         headers = self.endpoints.build_headers(self.Bearer)
         response = self.session.post(
             self.endpoints.graphql, headers=headers, data=query
@@ -160,11 +198,11 @@ class Fennel:
             raise Exception(
                 f"Portfolio Request failed with status code {response.status_code}: {response.text}"
             )
-        return response.json()["data"]["portfolio"]
+        return response.json()["data"]["account"]["portfolio"]
 
     @check_login
-    def get_stock_holdings(self):
-        query = self.endpoints.stock_holdings_query()
+    def get_stock_holdings(self, account_id):
+        query = self.endpoints.stock_holdings_query(account_id)
         headers = self.endpoints.build_headers(self.Bearer)
         response = self.session.post(
             self.endpoints.graphql, headers=headers, data=query
@@ -174,7 +212,7 @@ class Fennel:
                 f"Stock Holdings Request failed with status code {response.status_code}: {response.text}"
             )
         response = response.json()
-        return response["data"]["portfolio"]["bulbs"]
+        return response["data"]["account"]["portfolio"]["bulbs"]
 
     @check_login
     def is_market_open(self):

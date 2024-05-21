@@ -19,50 +19,107 @@ class Endpoints:
             variables = {}
         return {"operationName": None, "variables": variables, "query": query}
 
-    def portfolio_query(self):
+    def account_ids_query(self):
         query = """
-            query GetPortfolioSummary {
-                portfolio {
-                    cash {
-                        balance {
-                            canTrade
-                            canWithdraw
-                            reservedBalance
-                            settledBalance
-                            tradeBalance
-                            tradeDecrease
-                            tradeIncrease
-                        }
-                        currency
+            query Check {
+                user {
+                    id
+                    accounts {
+                        name
+                        id
+                        created
+                        isPrimary
+                        status
                     }
-                    totalEquityValue
                 }
             }
         """
         return json.dumps(self.build_graphql_payload(query))
 
-    def stock_holdings_query(self):
+    def list_full_accounts_query(self):
         query = """
-            query MinimumPortfolioData {
-                portfolio {
-                    totalEquityValue
-                    bulbs {
-                        isin
-                        investment {
-                            marketValue
-                            ownedShares
-                        }
-                        security {
-                            currentStockPrice
-                            ticker
-                            securityName
-                            securityType
+            query ListFullAccounts {
+                user {
+                    id
+                    accounts {
+                        name
+                        id
+                        created
+                        isPrimary
+                        status
+                        portfolio {
+                            id
+                            totalEquityValue
+                            cash {
+                                balance {
+                                    canTrade
+                                    canWithdraw
+                                    reservedBalance
+                                    settledBalance
+                                    tradeBalance
+                                    tradeDecrease
+                                    tradeIncrease
+                                }
+                                currency
+                            }
+                            totalEquityValue
                         }
                     }
                 }
             }
         """
         return json.dumps(self.build_graphql_payload(query))
+
+    def portfolio_query(self, account_id):
+        query = """
+            query GetPortfolioSummary($accountId: String!) {
+                account(accountId: $accountId) {
+                    id
+                    portfolio {
+                        cash {
+                            balance {
+                                canTrade
+                                canWithdraw
+                                reservedBalance
+                                settledBalance
+                                tradeBalance
+                                tradeDecrease
+                                tradeIncrease
+                            }
+                            currency
+                        }
+                        totalEquityValue
+                    }
+                }
+            }
+        """
+        return json.dumps(self.build_graphql_payload(query, {"accountId": account_id}))
+
+    def stock_holdings_query(self, account_id):
+        query = """
+            query MinimumPortfolioData($accountId: String!) {
+                account(accountId: $accountId) {
+                    id
+                    portfolio {
+                        totalEquityValue
+                        bulbs {
+                            isin
+                            investment {
+                                marketValue
+                                ownedShares
+                            }
+                            security {
+                                currentStockPrice
+                                ticker
+                                securityName
+                                securityType
+                            }
+                        }
+                    }
+                }
+            }
+        """
+        return json.dumps(self.build_graphql_payload(query, {"accountId": account_id}))
 
     def is_market_open_query(self):
         query = """
