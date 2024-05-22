@@ -75,11 +75,9 @@ class Fennel:
         self.ID_Token = None
 
     def login(self, email, wait_for_code=True, code=None):
-        # If creds exist, then see if they are valid
-        if self.Bearer is not None:
-            if self._verify_login():
-                return True
-            self._clear_credentials()
+        # If creds exist, check if they are valid/try to refresh
+        if self.Bearer is not None and self._verify_login():
+            return True
         if code is None:
             url = self.endpoints.retrieve_bearer_url()
             payload = {
@@ -113,7 +111,6 @@ class Fennel:
         self.Refresh = response["refresh_token"]
         self.ID_Token = response["id_token"]
         self.refresh_token()
-        self._save_credentials()
         self.get_account_ids()
         return True
 
@@ -133,6 +130,7 @@ class Fennel:
         self.Bearer = response["access_token"]
         self.Refresh = response["refresh_token"]
         self.ID_Token = response["id_token"]
+        self._save_credentials()
         return response
 
     def _verify_login(self):
@@ -142,10 +140,13 @@ class Fennel:
             return True
         except Exception:
             try:
+                # Try to refresh token
                 self.refresh_token()
                 self.get_account_ids()
                 return True
             except Exception:
+                # Unable to refresh, clear credentials
+                self._clear_credentials()
                 return False
 
     @check_login
