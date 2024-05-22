@@ -144,8 +144,9 @@ class Fennel:
                 self.refresh_token()
                 self.get_account_ids()
                 return True
-            except Exception:
+            except Exception as e:
                 # Unable to refresh, clear credentials
+                print(f"Failed to refresh token: {e}")
                 self._clear_credentials()
                 return False
 
