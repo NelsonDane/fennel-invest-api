@@ -204,7 +204,7 @@ class Fennel:
     def get_stock_quote(self, ticker):
         query = self.endpoints.stock_search_query(ticker)
         headers = self.endpoints.build_headers(self.Bearer)
-        response = self.session.post(
+        search_response = self.session.post(
             self.endpoints.graphql, headers=headers, data=query
         )
         if search_response.status_code != 200:
