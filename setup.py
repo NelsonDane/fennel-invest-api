@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="fennel_invest_api",
-    version="1.0.5",
+    version="1.0.7",
     description="Unofficial Fennel.com Invest API written in Python Requests",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
