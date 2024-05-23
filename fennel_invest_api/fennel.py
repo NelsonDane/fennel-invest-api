@@ -219,7 +219,9 @@ class Fennel:
     @check_login
     def get_stock_price(self, ticker):
         quote = self.get_stock_quote(ticker)
-        return quote["data"]["searchSearch"]["searchSecurities"][0]["currentStockPrice"]
+        if len(quote["data"]["searchSearch"]["searchSecurities"]) == 0:
+            return None
+        return quote["data"]["searchSearch"]["searchSecurities"][0]["security"]["currentStockPrice"]
 
     @check_login
     def get_stock_holdings(self, account_id):
