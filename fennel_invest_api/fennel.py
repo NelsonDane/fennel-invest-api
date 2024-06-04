@@ -203,6 +203,27 @@ class Fennel:
         return response.json()["data"]["account"]["portfolio"]
 
     @check_login
+    def get_stock_quote(self, ticker):
+        query = self.endpoints.stock_search_query(ticker)
+        headers = self.endpoints.build_headers(self.Bearer)
+        search_response = self.session.post(
+            self.endpoints.graphql, headers=headers, data=query
+        )
+        if search_response.status_code != 200:
+            raise Exception(
+                f"Stock Search Request failed with status code {search_response.status_code}: {search_response.text}"
+            )
+        search_response = search_response.json()
+        return search_response
+
+    @check_login
+    def get_stock_price(self, ticker):
+        quote = self.get_stock_quote(ticker)
+        if len(quote["data"]["searchSearch"]["searchSecurities"]) == 0:
+            return None
+        return quote["data"]["searchSearch"]["searchSecurities"][0]["security"]["currentStockPrice"]
+
+    @check_login
     def get_stock_holdings(self, account_id):
         query = self.endpoints.stock_holdings_query(account_id)
         headers = self.endpoints.build_headers(self.Bearer)
