@@ -216,8 +216,17 @@ class Fennel:
         search_response = search_response.json()
         securities = search_response["data"]["searchSearch"]["searchSecurities"]
         if len(securities) == 0:
-            raise Exception(f"No stock found with ticker {ticker}. Please check the app to see if it is valid.")
-        stock_quote = next((x for x in securities if x["security"]["ticker"].lower() == ticker.lower()), None)
+            raise Exception(
+                f"No stock found with ticker {ticker}. Please check the app to see if it is valid."
+            )
+        stock_quote = next(
+            (
+                x
+                for x in securities
+                if x["security"]["ticker"].lower() == ticker.lower()
+            ),
+            None,
+        )
         return stock_quote
 
     @check_login
