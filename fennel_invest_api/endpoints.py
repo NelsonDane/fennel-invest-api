@@ -139,7 +139,8 @@ class Endpoints:
                     searchSecurities(query: $query, count: $count) {
                         isin
                         security {
-                                currentStockPrice
+                            currentStockPrice
+                            ticker
                         }
                     }
                 }

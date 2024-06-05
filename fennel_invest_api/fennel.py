@@ -214,14 +214,16 @@ class Fennel:
                 f"Stock Search Request failed with status code {search_response.status_code}: {search_response.text}"
             )
         search_response = search_response.json()
-        return search_response
+        securities = search_response["data"]["searchSearch"]["searchSecurities"]
+        if len(securities) == 0:
+            raise Exception(f"No stock found with ticker {ticker}. Please check the app to see if it is valid.")
+        stock_quote = next((x for x in securities if x["security"]["ticker"].lower() == ticker.lower()), None)
+        return stock_quote
 
     @check_login
     def get_stock_price(self, ticker):
         quote = self.get_stock_quote(ticker)
-        if len(quote["data"]["searchSearch"]["searchSecurities"]) == 0:
-            return None
-        return quote["data"]["searchSearch"]["searchSecurities"][0]["security"]["currentStockPrice"]
+        return None if quote is None else quote["security"]["currentStockPrice"]
 
     @check_login
     def get_stock_holdings(self, account_id):
@@ -252,6 +254,11 @@ class Fennel:
         return response["data"]["securityMarketInfo"]["isOpen"]
 
     @check_login
+    def get_stock_isin(self, ticker):
+        quote = self.get_stock_quote(ticker)
+        return None if quote is None else quote["isin"]
+
+    @check_login
     def place_order(
         self, account_id, ticker, quantity, side, price="market", dry_run=False
     ):
@@ -261,27 +268,24 @@ class Fennel:
         if not self.is_market_open():
             raise Exception("Market is closed. Cannot place order.")
         # Search for stock "isin"
-        query = self.endpoints.stock_search_query(ticker)
-        headers = self.endpoints.build_headers(self.Bearer)
-        search_response = self.session.post(
-            self.endpoints.graphql, headers=headers, data=query
-        )
-        if search_response.status_code != 200:
-            raise Exception(
-                f"Stock Search Request failed with status code {search_response.status_code}: {search_response.text}"
-            )
-        search_response = search_response.json()
+        isin = self.get_stock_isin(ticker)
+        if isin is None:
+            raise Exception(f"Failed to find ISIN for stock with ticker {ticker}")
         if dry_run:
-            return search_response
-        if len(search_response["data"]["searchSearch"]["searchSecurities"]) == 0:
-            raise Exception(
-                f"No stock found with ticker {ticker}. Please check the app to see if it is valid."
-            )
-        isin = search_response["data"]["searchSearch"]["searchSecurities"][0]["isin"]
+            return {
+                "account_id": account_id,
+                "ticker": ticker,
+                "quantity": quantity,
+                "isin": isin,
+                "side": side,
+                "price": price,
+                "dry_run_success": True,
+            }
         # Place order
         query = self.endpoints.stock_order_query(
             account_id, ticker, quantity, isin, side, price
         )
+        headers = self.endpoints.build_headers(self.Bearer)
         order_response = self.session.post(
             self.endpoints.graphql, headers=headers, data=query
         )
