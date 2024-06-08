@@ -6,10 +6,13 @@ Fennel does everything via GraphQL, so yes, this is very slow.
 
 This is still a work in progress, so it will have bugs and missing features. Please feel free to contribute!
 
+## Important!
+Do not use any version of this library before 1.0.9. Earlier versions had a bug with placing certain orders that when executed excessively could lead to your account being locked. This has been fixed in 1.0.9. See [this issue](https://github.com/NelsonDane/fennel-invest-api/issues/14)
+
 ## Installation
 
 ```bash
-pip install fennel-invest-api
+pip install 'fennel-invest-api>=1.0.9'
 ```
 
 ## Usage: Logging In
