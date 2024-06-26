@@ -161,6 +161,7 @@ class Fennel:
             raise Exception(
                 f"Account ID Check failed with status code {response.status_code}: {response.text}"
             )
+        print(f"Account ID Check Response: {response.json()}")
         response = response.json()["data"]["user"]["accounts"]
         response_list = sorted(response, key=lambda x: x["created"])
         account_ids = []
@@ -181,6 +182,7 @@ class Fennel:
             raise Exception(
                 f"Full Account Request failed with status code {response.status_code}: {response.text}"
             )
+        print(f"Full Account Response: {response.json()}")
         response = response.json()["data"]["user"]["accounts"]
         response_list = sorted(response, key=lambda x: x["created"])
         approved_accounts = []

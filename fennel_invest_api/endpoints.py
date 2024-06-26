@@ -38,7 +38,7 @@ class Endpoints:
 
     def list_full_accounts_query(self):
         query = """
-            query ListFullAccounts {
+            query Check {
                 user {
                     id
                     accounts {
