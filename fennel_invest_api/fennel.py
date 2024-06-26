@@ -173,7 +173,8 @@ class Fennel:
 
     @check_login
     def get_full_accounts(self):
-        query = self.endpoints.list_full_accounts_query()
+        # query = self.endpoints.list_full_accounts_query()
+        query = self.endpoints.account_ids_query()
         headers = self.endpoints.build_headers(self.Bearer)
         response = self.session.post(
             self.endpoints.graphql, headers=headers, data=query
