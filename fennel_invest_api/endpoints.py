@@ -36,39 +36,41 @@ class Endpoints:
         """
         return json.dumps(self.build_graphql_payload(query))
 
-    def list_full_accounts_query(self):
-        query = """
-            query Check {
-                user {
-                    id
-                    accounts {
-                        name
-                        id
-                        created
-                        isPrimary
-                        status
-                        portfolio {
-                            id
-                            totalEquityValue
-                            cash {
-                                balance {
-                                    canTrade
-                                    canWithdraw
-                                    reservedBalance
-                                    settledBalance
-                                    tradeBalance
-                                    tradeDecrease
-                                    tradeIncrease
-                                }
-                                currency
-                            }
-                            totalEquityValue
-                        }
-                    }
-                }
-            }
-        """
-        return json.dumps(self.build_graphql_payload(query))
+    # This returns 503 for some users,
+    # so best to run account_ids_query and then portfolio_query
+    # def list_full_accounts_query(self):
+    #     query = """
+    #         query ListFullAccounts {
+    #             user {
+    #                 id
+    #                 accounts {
+    #                     name
+    #                     id
+    #                     created
+    #                     isPrimary
+    #                     status
+    #                     portfolio {
+    #                         id
+    #                         totalEquityValue
+    #                         cash {
+    #                             balance {
+    #                                 canTrade
+    #                                 canWithdraw
+    #                                 reservedBalance
+    #                                 settledBalance
+    #                                 tradeBalance
+    #                                 tradeDecrease
+    #                                 tradeIncrease
+    #                             }
+    #                             currency
+    #                         }
+    #                         totalEquityValue
+    #                     }
+    #                 }
+    #             }
+    #         }
+    #     """
+    #     return json.dumps(self.build_graphql_payload(query))
 
     def portfolio_query(self, account_id):
         query = """

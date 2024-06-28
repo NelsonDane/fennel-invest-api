@@ -50,7 +50,7 @@ for account_id in account_ids:
 ## Usage: Get Portfolio
 ```python
 # For all accounts
-full_portfolio = fennel.get_full_accounts()
+full_portfolio = fennel.get_full_accounts() # This endpoint may return 503. If it does, then run fennel.get_account_ids() and loop through the accounts
 print(full_portfolio)
 # For a single account ID
 portfolio = fennel.get_portfolio_summary(account_id)
