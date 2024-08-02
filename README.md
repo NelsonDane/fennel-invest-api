@@ -12,7 +12,7 @@ Do not use any version of this library before 1.0.9. Earlier versions had a bug 
 ## Installation
 
 ```bash
-pip install 'fennel-invest-api>=1.0.9'
+pip install 'fennel-invest-api>=1.1.0'
 ```
 
 ## Usage: Logging In
