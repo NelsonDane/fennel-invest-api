@@ -49,9 +49,12 @@ for account_id in account_ids:
 
 ## Usage: Get Portfolio
 ```python
-# For all accounts
-full_portfolio = fennel.get_full_accounts() # This endpoint may return 503. If it does, then run fennel.get_account_ids() and loop through the accounts
-print(full_portfolio)
+# For all account IDs
+portfolio = fennel.get_account_ids()
+for account_id in account_ids:
+    print(account_id)
+    portfolio = fennel.get_portfolio_summary(account_id)
+    print(portfolio)
 # For a single account ID
 portfolio = fennel.get_portfolio_summary(account_id)
 print(portfolio)
@@ -61,10 +64,11 @@ print(portfolio)
 ```python
 order = fennel.place_order(
     account_id=account_id,
-    symbol="AAPL",
+    ticker="AAPL",
     quantity=1,
     side="buy", # Must be "buy" or "sell"
     price="market" # Only market orders are supported for now
+    dry_run=False # If True, will not actually place the order
 )
 print(order)
 ```
