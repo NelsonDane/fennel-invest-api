@@ -23,16 +23,16 @@ from fennel_invest_api import Fennel
 fennel = Fennel()
 fennel.login(
     email="your-email@email.com",
-    wait_for_2fa=True # When logging in for the first time, you need to wait for email 2FA
+    wait_for_code=True # When logging in for the first time, you need to wait for email 2FA
 )
 ```
 
-If you'd like to handle the 2FA yourself programmatically instead of waiting for `input()`, you can call it with `wait_for_2fa=False`, catch the 2FA exception, then call it again with the 2FA code:
+If you'd like to handle the 2FA yourself programmatically instead of waiting for `input()`, you can call it with `wait_for_code=False`, catch the 2FA exception, then call it again with the 2FA code:
 
 ```python
 fennel.login(
     email="your-email@email.com",
-    wait_for_2fa=False
+    wait_for_code=False
     code="123456" # Should be six-digit integer from email
 )
 ```
