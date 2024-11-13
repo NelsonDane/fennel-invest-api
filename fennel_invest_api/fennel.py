@@ -269,6 +269,19 @@ class Fennel:
         return None if quote is None else quote["isin"]
 
     @check_login
+    def get_stock_info_from_holdings(self, account_id, ticker) -> dict | None:
+        holdings = self.get_stock_holdings(account_id)
+        stock_info = next(
+            (
+                x
+                for x in holdings
+                if x["security"]["ticker"].lower() == ticker.lower()
+            ),
+            None,
+        )
+        return stock_info
+
+    @check_login
     def place_order(
         self, account_id, ticker, quantity, side, price="market", dry_run=False
     ):
@@ -279,8 +292,17 @@ class Fennel:
             raise Exception("Market is closed. Cannot place order.")
         # Search for stock "isin"
         isin = self.get_stock_isin(ticker)
+        if isin is None and side.lower() == "sell":
+            # Can't get from app search, try holdings
+            stock_info = self.get_stock_info_from_holdings(account_id, ticker)
+            if stock_info is not None:
+                isin = stock_info["isin"]
         if isin is None:
             raise Exception(f"Failed to find ISIN for stock with ticker {ticker}")
+        # Check if stock is tradable
+        can_trade, restriction_reason = self.is_stock_tradable(isin, account_id, side)
+        if not can_trade:
+            raise Exception(f"Stock {ticker} is not tradable: {restriction_reason}")
         if dry_run:
             return {
                 "account_id": account_id,

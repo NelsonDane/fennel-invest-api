@@ -134,7 +134,6 @@ class Endpoints:
         return json.dumps(self.build_graphql_payload(query))
 
     def stock_search_query(self, symbol, count=5):
-        # idk what count is
         query = """
             query Search($query: String!, $count: Int) {
                 searchSearch {
