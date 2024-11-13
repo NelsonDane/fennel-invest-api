@@ -12,7 +12,7 @@ Do not use any version of this library before 1.0.9. Earlier versions had a bug 
 ## Installation
 
 ```bash
-pip install 'fennel-invest-api>=1.0.9'
+pip install 'fennel-invest-api>=1.1.0'
 ```
 
 ## Usage: Logging In
@@ -23,16 +23,16 @@ from fennel_invest_api import Fennel
 fennel = Fennel()
 fennel.login(
     email="your-email@email.com",
-    wait_for_2fa=True # When logging in for the first time, you need to wait for email 2FA
+    wait_for_code=True # When logging in for the first time, you need to wait for email 2FA
 )
 ```
 
-If you'd like to handle the 2FA yourself programmatically instead of waiting for `input()`, you can call it with `wait_for_2fa=False`, catch the 2FA exception, then call it again with the 2FA code:
+If you'd like to handle the 2FA yourself programmatically instead of waiting for `input()`, you can call it with `wait_for_code=False`, catch the 2FA exception, then call it again with the 2FA code:
 
 ```python
 fennel.login(
     email="your-email@email.com",
-    wait_for_2fa=False
+    wait_for_code=False
     code="123456" # Should be six-digit integer from email
 )
 ```
@@ -49,9 +49,12 @@ for account_id in account_ids:
 
 ## Usage: Get Portfolio
 ```python
-# For all accounts
-full_portfolio = fennel.get_full_accounts() # This endpoint may return 503. If it does, then run fennel.get_account_ids() and loop through the accounts
-print(full_portfolio)
+# For all account IDs
+portfolio = fennel.get_account_ids()
+for account_id in account_ids:
+    print(account_id)
+    portfolio = fennel.get_portfolio_summary(account_id)
+    print(portfolio)
 # For a single account ID
 portfolio = fennel.get_portfolio_summary(account_id)
 print(portfolio)
@@ -61,10 +64,11 @@ print(portfolio)
 ```python
 order = fennel.place_order(
     account_id=account_id,
-    symbol="AAPL",
+    ticker="AAPL",
     quantity=1,
     side="buy", # Must be "buy" or "sell"
     price="market" # Only market orders are supported for now
+    dry_run=False # If True, will not actually place the order
 )
 print(order)
 ```

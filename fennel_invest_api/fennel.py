@@ -171,26 +171,6 @@ class Fennel:
         return account_ids
 
     @check_login
-    def get_full_accounts(self):
-        # query = self.endpoints.list_full_accounts_query()
-        query = self.endpoints.account_ids_query()
-        headers = self.endpoints.build_headers(self.Bearer)
-        response = self.session.post(
-            self.endpoints.graphql, headers=headers, data=query
-        )
-        if response.status_code != 200:
-            raise Exception(
-                f"Full Account Request failed with status code {response.status_code}: {response.text}"
-            )
-        response = response.json()["data"]["user"]["accounts"]
-        response_list = sorted(response, key=lambda x: x["created"])
-        approved_accounts = []
-        for account in response_list:
-            if account["status"] == "APPROVED":
-                approved_accounts.append(account)
-        return approved_accounts
-
-    @check_login
     def get_portfolio_summary(self, account_id):
         query = self.endpoints.portfolio_query(account_id)
         headers = self.endpoints.build_headers(self.Bearer)
@@ -205,7 +185,7 @@ class Fennel:
 
     @check_login
     def get_stock_quote(self, ticker):
-        query = self.endpoints.stock_search_query(ticker)
+        query = self.endpoints.stock_search_query(ticker, 20)
         headers = self.endpoints.build_headers(self.Bearer)
         search_response = self.session.post(
             self.endpoints.graphql, headers=headers, data=query
@@ -267,6 +247,25 @@ class Fennel:
     def get_stock_isin(self, ticker):
         quote = self.get_stock_quote(ticker)
         return None if quote is None else quote["isin"]
+
+    @check_login
+    def is_stock_tradable(self, isin, account_id, side="buy"):
+        query = self.endpoints.is_tradable_query(isin, account_id)
+        headers = self.endpoints.build_headers(self.Bearer)
+        response = self.session.post(
+            self.endpoints.graphql, headers=headers, data=query
+        )
+        if response.status_code != 200:
+            raise Exception(
+                f"Tradable Request failed with status code {response.status_code}: {response.text}"
+            )
+        response = response.json()
+        can_trade = response["data"]["bulbBulb"]["tradeable"]
+        if can_trade is None:
+            return False, "No tradeable data found"
+        if side.lower() == "buy":
+            return can_trade["canBuy"], can_trade["restrictionReason"]
+        return can_trade["canSell"], can_trade["restrictionReason"]
 
     @check_login
     def get_stock_info_from_holdings(self, account_id, ticker) -> dict | None:
