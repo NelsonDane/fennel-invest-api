@@ -271,11 +271,7 @@ class Fennel:
     def get_stock_info_from_holdings(self, account_id, ticker) -> dict | None:
         holdings = self.get_stock_holdings(account_id)
         stock_info = next(
-            (
-                x
-                for x in holdings
-                if x["security"]["ticker"].lower() == ticker.lower()
-            ),
+            (x for x in holdings if x["security"]["ticker"].lower() == ticker.lower()),
             None,
         )
         return stock_info
