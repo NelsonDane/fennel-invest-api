@@ -1,6 +1,4 @@
-# Endpoints for Fennel API
 import json
-
 
 class Endpoints:
     def __init__(self):
@@ -25,11 +23,27 @@ class Endpoints:
                 user {
                     id
                     accounts {
-                        name
-                        id
-                        created
-                        isPrimary
-                        status
+                        ... on Account {
+                            name
+                            id
+                            created
+                            isPrimary
+                            status
+                        }
+                        ... on RothIRA {
+                            name
+                            id
+                            created
+                            isPrimary
+                            status
+                        }
+                        ... on TraditionalIRA {
+                            name
+                            id
+                            created
+                            isPrimary
+                            status
+                        }
                     }
                 }
             }
@@ -40,21 +54,59 @@ class Endpoints:
         query = """
             query GetPortfolioSummary($accountId: String!) {
                 account(accountId: $accountId) {
-                    id
-                    portfolio {
-                        cash {
-                            balance {
-                                canTrade
-                                canWithdraw
-                                reservedBalance
-                                settledBalance
-                                tradeBalance
-                                tradeDecrease
-                                tradeIncrease
+                    ... on Account {
+                        id
+                        portfolio {
+                            cash {
+                                balance {
+                                    canTrade
+                                    canWithdraw
+                                    reservedBalance
+                                    settledBalance
+                                    tradeBalance
+                                    tradeDecrease
+                                    tradeIncrease
+                                }
+                                currency
                             }
-                            currency
+                            totalEquityValue
                         }
-                        totalEquityValue
+                    }
+                    ... on RothIRA {
+                        id
+                        portfolio {
+                            cash {
+                                balance {
+                                    canTrade
+                                    canWithdraw
+                                    reservedBalance
+                                    settledBalance
+                                    tradeBalance
+                                    tradeDecrease
+                                    tradeIncrease
+                                }
+                                currency
+                            }
+                            totalEquityValue
+                        }
+                    }
+                    ... on TraditionalIRA {
+                        id
+                        portfolio {
+                            cash {
+                                balance {
+                                    canTrade
+                                    canWithdraw
+                                    reservedBalance
+                                    settledBalance
+                                    tradeBalance
+                                    tradeDecrease
+                                    tradeIncrease
+                                }
+                                currency
+                            }
+                            totalEquityValue
+                        }
                     }
                 }
             }
@@ -65,20 +117,60 @@ class Endpoints:
         query = """
             query MinimumPortfolioData($accountId: String!) {
                 account(accountId: $accountId) {
-                    id
-                    portfolio {
-                        totalEquityValue
-                        bulbs {
-                            isin
-                            investment {
-                                marketValue
-                                ownedShares
+                    ... on Account {
+                        id
+                        portfolio {
+                            totalEquityValue
+                            bulbs {
+                                isin
+                                investment {
+                                    marketValue
+                                    ownedShares
+                                }
+                                security {
+                                    currentStockPrice
+                                    ticker
+                                    securityName
+                                    securityType
+                                }
                             }
-                            security {
-                                currentStockPrice
-                                ticker
-                                securityName
-                                securityType
+                        }
+                    }
+                    ... on RothIRA {
+                        id
+                        portfolio {
+                            totalEquityValue
+                            bulbs {
+                                isin
+                                investment {
+                                    marketValue
+                                    ownedShares
+                                }
+                                security {
+                                    currentStockPrice
+                                    ticker
+                                    securityName
+                                    securityType
+                                }
+                            }
+                        }
+                    }
+                    ... on TraditionalIRA {
+                        id
+                        portfolio {
+                            totalEquityValue
+                            bulbs {
+                                isin
+                                investment {
+                                    marketValue
+                                    ownedShares
+                                }
+                                security {
+                                    currentStockPrice
+                                    ticker
+                                    securityName
+                                    securityType
+                                }
                             }
                         }
                     }
