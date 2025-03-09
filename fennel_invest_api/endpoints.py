@@ -255,7 +255,7 @@ class Endpoints:
             "accept-encoding": "gzip",
             "content-type": "application/json",
             "host": "fennel-api.prod.fennel.com",
-            "user-agent": "Dart/3.3 (dart:io)",
+            "user-agent": "Fennel/1.6.48+6276 (Generic Android-x86_64; Android 13) Dart/3.5.3 (dart:io)",
         }
         if Bearer is not None:
             headers["authorization"] = f"Bearer {Bearer}"
