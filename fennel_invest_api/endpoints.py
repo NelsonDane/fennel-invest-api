@@ -1,5 +1,6 @@
 import json
 
+
 class Endpoints:
     def __init__(self):
         self.accounts = "https://accounts.fennel.com"
