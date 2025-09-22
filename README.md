@@ -67,7 +67,7 @@ order = fennel.place_order(
     ticker="AAPL",
     quantity=1,
     side="buy", # Must be "buy" or "sell"
-    price="market" # Only market orders are supported for now
+    price="market", # Only market orders are supported for now
     dry_run=False # If True, will not actually place the order
 )
 print(order)
