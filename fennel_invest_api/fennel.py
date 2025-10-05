@@ -295,28 +295,28 @@ class Fennel:
         # Validate side
         try:
             side_int = Side.Value(side)
-            side_enum = Side(side_int)
+            side_enum = Side.Name(side_int)
         except ValueError as e:
             msg = f'Invalid side: {side}. Must be "BUY" or "SELL".'
             raise ValueError(msg) from e
         # Validate order type
         try:
             order_type_int = OrderType.Value(order_type)
-            order_type_enum = OrderType(order_type_int)
+            order_type_enum = OrderType.Name(order_type_int)
         except ValueError as e:
             msg = f'Invalid order type: {order_type}. Must be "MARKET" or "LIMIT".'
             raise ValueError(msg) from e
         # Validate time in force
         try:
             time_in_force_int = TimeInForce.Value(time_in_force)
-            time_in_force_enum = TimeInForce(time_in_force_int)
+            time_in_force_enum = TimeInForce.Name(time_in_force_int)
         except ValueError as e:
             msg = f'Invalid time in force: {time_in_force}. Must be "DAY".'
             raise ValueError(msg) from e
         # Validate route
         try:
             route_int = RoutingOption.Value(route)
-            route_enum = RoutingOption(route_int)
+            route_enum = RoutingOption.Name(route_int)
         except ValueError as e:
             msg = f'Invalid route: {route}. Must be "EXCHANGE", "EXCHANGE_ATS", "EXCHANGE_ATS_SDP", or "QUIK".'
             raise ValueError(msg) from e
