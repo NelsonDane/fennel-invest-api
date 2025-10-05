@@ -36,32 +36,45 @@ for account in account_info:
     print(f"Name: {account.name}, Account ID: {account.id}, Type: {account.account_type}")
 ```
 
-## Usage: Get Stock Holdings
-```python
-account_info = fennel.get_account_info()
-for account in account_info:
-    positions = fennel.get_portfolio_positions(account.id)
-    for position in positions:
-        print(f"{position.symbol}: {position.shares} shares at ${position.value}")
-```
-
 ## Usage: Get Account Summary
 ```python
 account_info = fennel.get_account_info()
 for account in account_info:
     summary = fennel.get_portfolio_cash_summary(account.id)
-    print(f"Account: {account.name}, Portfolio Value: ${summary.portfolio_value}, Buying Power: ${summary.buying_power}, Cash: ${summary.cash_available}")
+    print(f"Account: {account.name}, Portfolio Value: ${summary.portfolio_value:.2f}, Buying Power: ${summary.buying_power:.2f}, Cash: ${summary.cash_available:.2f}")
+```
+
+## Usage: Get Stock Holdings
+```python
+account_info = fennel.get_account_info()
+for account_id in account_info:
+    positions = fennel.get_portfolio_positions(account_id.id)
+    print(f"Positions for account {account_id.name}:")
+    for position in positions:
+        print(f"{position.symbol}: {position.shares} shares at ${position.value:.2f}")
 ```
 
 ## Usage: Placing Orders
+Market order (Default):
+```python
+order = fennel.place_order(
+    account_id=account_id,
+    symbol="AAPL",
+    shares=1,
+    side="BUY"
+)
+print(order)
+```
+
+Limit order:
 ```python
 order = fennel.place_order(
     account_id=account_id,
     ticker="AAPL",
     quantity=1,
-    side="buy", # Must be "buy" or "sell"
-    price="market", # Only market orders are supported for now
-    dry_run=False # If True, will not actually place the order
+    side="BUY",
+    order_type="LIMIT",
+    limit_price=150.00,
 )
 print(order)
 ```
