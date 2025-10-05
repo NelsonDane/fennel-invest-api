@@ -3,4 +3,6 @@ build/
 .env
 test*
 *.egg-info/
-*.pkl
+proto/
+*_pb2.py
+*_pb2.pyi

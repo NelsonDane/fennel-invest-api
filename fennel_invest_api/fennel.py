@@ -1,323 +1,342 @@
-import os
-import pickle
+from collections.abc import Callable
+from datetime import datetime
+from functools import wraps
+from typing import Concatenate, Literal, ParamSpec, TypeVar
 
 import requests
 
 from fennel_invest_api.endpoints import Endpoints
+from fennel_invest_api.models.account_id_pb2 import AccountIDRequest
+from fennel_invest_api.models.accounts_pb2 import Account, AccountsResponse
+from fennel_invest_api.models.cancel_order_pb2 import CancelOrderRequest
+from fennel_invest_api.models.create_order_pb2 import CreateOrderRequest
+from fennel_invest_api.models.get_order_pb2 import GetOrderRequest
+from fennel_invest_api.models.list_orders_pb2 import ListOrdersRequest, ListOrdersResponse, Order
+from fennel_invest_api.models.nbbo_pb2 import NbboRequest, NbboResponse
+from fennel_invest_api.models.order_details_pb2 import OrderType, RoutingOption, Side, TimeInForce
+from fennel_invest_api.models.order_response_pb2 import OrderResponse
+from fennel_invest_api.models.portfolio_summary_pb2 import PortfolioSummaryResponse
+from fennel_invest_api.models.positions_pb2 import Position, PositionsResponse
+from fennel_invest_api.models.prices_pb2 import MultiPriceRequest, MultiPriceResponse, PriceResponse
+from fennel_invest_api.utils import FennelAPIError, InvalidBearerTokenError, MissingBearerError
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-def check_login(func):
-    def wrapper(self, *args, **kwargs):
-        if self.Bearer is None:
-            raise Exception("Bearer token is not set. Please login first.")
+def check_login(func: Callable[Concatenate["Fennel", P], R]) -> Callable[Concatenate["Fennel", P], R]:
+    """Ensure Bearer token is valid before authenticated request.
+
+    Returns:
+        The decorated function callable.
+
+    """
+
+    @wraps(func)
+    def wrapper(self: "Fennel", *args: P.args, **kwargs: P.kwargs) -> R:
+        if not self.Bearer:
+            raise MissingBearerError
         return func(self, *args, **kwargs)
 
     return wrapper
 
 
 class Fennel:
-    def __init__(self, filename="fennel_credentials.pkl", path=None) -> None:
+    """Object to interact with the Fennel API. One object per account/token."""
+
+    def __init__(self, pat_token: str) -> None:
+        """Initialize Fennel API connection.
+
+        Raises:
+            InvalidBearerTokenError: If the Bearer token is invalid.
+
+        """
         self.session = requests.Session()
         self.endpoints = Endpoints()
-        self.Bearer = None
-        self.Refresh = None
-        self.ID_Token = None
         self.timeout = 10
-        self.account_ids = []  # For multiple accounts
-        self.client_id = "FXGlhcVdamwozAFp8BZ2MWl6coPl6agX"
-        self.filename = filename
-        self.path = None
-        if path is not None:
-            self.path = path
-        self._load_credentials()
-
-    def _load_credentials(self):
-        filename = self.filename
-        if self.path is not None:
-            filename = os.path.join(self.path, filename)
-            if not os.path.exists(self.path):
-                os.makedirs(self.path)
-        if os.path.exists(filename):
-            with open(filename, "rb") as f:
-                credentials = pickle.load(f)
-            self.Bearer = credentials.get("Bearer")
-            self.Refresh = credentials.get("Refresh")
-            self.ID_Token = credentials.get("ID_Token")
-            self.client_id = credentials.get("client_id", self.client_id)
-
-    def _save_credentials(self):
-        filename = self.filename
-        if self.path is not None:
-            filename = os.path.join(self.path, filename)
-            if not os.path.exists(self.path):
-                os.makedirs(self.path)
-        with open(filename, "wb") as f:
-            pickle.dump(
-                {
-                    "Bearer": self.Bearer,
-                    "Refresh": self.Refresh,
-                    "ID_Token": self.ID_Token,
-                    "client_id": self.client_id,
-                },
-                f,
-            )
-
-    def _clear_credentials(self):
-        filename = self.filename
-        if self.path is not None:
-            filename = os.path.join(self.path, filename)
-            if not os.path.exists(self.path):
-                os.makedirs(self.path)
-        if os.path.exists(filename):
-            os.remove(filename)
-        self.Bearer = None
-        self.Refresh = None
-        self.ID_Token = None
-
-    def login(self, email, wait_for_code=True, code=None):
-        # If creds exist, check if they are valid/try to refresh
-        if self.Bearer is not None and self._verify_login():
-            return True
-        if code is None:
-            url = self.endpoints.retrieve_bearer_url()
-            payload = {
-                "email": email,
-                "client_id": self.client_id,
-                "connection": "email",
-                "send": "code",
-            }
-            response = self.session.post(url, json=payload)
-            if response.status_code != 200:
-                raise Exception(f"Failed to start passwordless login: {response.text}")
-            if not wait_for_code:
-                raise Exception("2FA required. Please provide the code.")
-            print("2FA code sent to email")
-            code = input("Enter 2FA code: ")
-        url = self.endpoints.oauth_url()
-        payload = {
-            "grant_type": "http://auth0.com/oauth/grant-type/passwordless/otp",
-            "client_id": self.client_id,
-            "otp": str(code),
-            "username": email,
-            "scope": "openid profile offline_access email",
-            "audience": "https://meta.api.fennel.com/graphql",
-            "realm": "email",
-        }
-        response = self.session.post(url, json=payload)
-        if response.status_code != 200:
-            raise Exception(f"Failed to login: {response.text}")
-        response = response.json()
-        self.Bearer = response["access_token"]
-        self.Refresh = response["refresh_token"]
-        self.ID_Token = response["id_token"]
-        self.refresh_token()
-        self.get_account_ids()
-        return True
-
-    def refresh_token(self):
-        url = self.endpoints.oauth_url()
-        headers = self.endpoints.build_headers(accounts_host=True)
-        payload = {
-            "grant_type": "refresh_token",
-            "client_id": self.client_id,
-            "refresh_token": self.Refresh,
-            "scope": "openid profile offline_access email",
-        }
-        response = self.session.post(url, json=payload, headers=headers)
-        if response.status_code != 200:
-            raise Exception(f"Failed to refresh bearer token: {response.text}")
-        response = response.json()
-        self.Bearer = response["access_token"]
-        self.Refresh = response["refresh_token"]
-        self.ID_Token = response["id_token"]
-        self._save_credentials()
-        return response
-
-    def _verify_login(self):
-        # Test login by getting Account IDs
+        self.Bearer = pat_token
+        self.headers = self.endpoints.build_headers(self.Bearer)
+        # Ensure bearer is valid
         try:
-            self.get_account_ids()
-            return True
-        except Exception:
-            try:
-                # Try to refresh token
-                self.refresh_token()
-                self.get_account_ids()
-                return True
-            except Exception as e:
-                # Unable to refresh, clear credentials
-                print(f"Failed to refresh token: {e}")
-                self._clear_credentials()
-                return False
+            self.get_account_info()
+        except FennelAPIError as e:
+            raise InvalidBearerTokenError from e
+
+    # region Accounts
+    # https://api.fennel.com/docs#tag/Accounts
 
     @check_login
-    def get_account_ids(self):
-        query = self.endpoints.account_ids_query()
-        headers = self.endpoints.build_headers(self.Bearer)
-        response = self.session.post(
-            self.endpoints.graphql, headers=headers, data=query
+    def get_account_info(self) -> list[Account]:
+        """Get Fennel Account Info: https://api.fennel.com/docs#tag/Accounts/operation/info_accounts_info_get.
+
+        Returns:
+            list[Account]: A list of accounts associated with the API token.
+
+        Raises:
+            FennelAPIError: If API call fails (doesn't return 200)
+
+        """
+        response = self.session.get(
+            url=self.endpoints.account_info_url(),
+            headers=self.headers,
+            timeout=self.timeout,
         )
-        if response.status_code != 200:
-            raise Exception(
-                f"Account ID Check failed with status code {response.status_code}: {response.text}"
-            )
-        response = response.json()["data"]["user"]["accounts"]
-        response_list = sorted(response, key=lambda x: x["created"])
-        account_ids = []
-        for account in response_list:
-            if account["status"] == "APPROVED":
-                account_ids.append(account["id"])
-        self.account_ids = account_ids
-        return account_ids
+        if not response.ok:
+            msg = f"Account ID Check failed with status code {response.status_code}: {response.text}"
+            raise FennelAPIError(msg)
+        response_proto = AccountsResponse()
+        response_proto.ParseFromString(response.content)
+        return list(response_proto.accounts)
+
+    # region: Portfolio
+    # https://api.fennel.com/docs#tag/Portfolio
 
     @check_login
-    def get_portfolio_summary(self, account_id):
-        query = self.endpoints.portfolio_query(account_id)
-        headers = self.endpoints.build_headers(self.Bearer)
+    def get_portfolio_positions(self, account_id: str) -> list[Position]:
+        """Get Fennel Positions for a specific account: https://api.fennel.com/docs#tag/Portfolio/operation/positions_portfolio_positions_post.
+
+        Returns:
+            list[Position]: A list of positions for the specified account.
+
+        Raises:
+            FennelAPIError: If API call fails (doesn't return 200)
+
+        """
         response = self.session.post(
-            self.endpoints.graphql, headers=headers, data=query
+            url=self.endpoints.portfolio_positions_url(),
+            headers=self.headers,
+            data=AccountIDRequest(account_id=account_id).SerializeToString(),
         )
-        if response.status_code != 200:
-            raise Exception(
-                f"Portfolio Request failed with status code {response.status_code}: {response.text}"
-            )
-        return response.json()["data"]["account"]["portfolio"]
+        if not response.ok:
+            msg = f"Portfolio Positions Request failed with status code {response.status_code}: {response.text}"
+            raise FennelAPIError(msg)
+        response_proto = PositionsResponse()
+        response_proto.ParseFromString(response.content)
+        return list(response_proto.positions)
 
     @check_login
-    def get_stock_quote(self, ticker):
-        query = self.endpoints.stock_search_query(ticker, 20)
-        headers = self.endpoints.build_headers(self.Bearer)
+    def get_portfolio_cash_summary(self, account_id: str) -> PortfolioSummaryResponse:
+        """Get Fennel Cash Summary for a specific account: https://api.fennel.com/docs#tag/Portfolio/operation/cash_summary_portfolio_summary_post.
+
+        Returns:
+            PortfolioSummaryResponse: The cash summary for the specified account.
+
+        Raises:
+            FennelAPIError: If API call fails (doesn't return 200)
+
+        """
+        response = self.session.post(
+            url=self.endpoints.portfolio_cash_summary_url(),
+            headers=self.headers,
+            data=AccountIDRequest(account_id=account_id).SerializeToString(),
+        )
+        if not response.ok:
+            msg = f"Portfolio Cash Summary Request failed with status code {response.status_code}: {response.text}"
+            raise FennelAPIError(msg)
+        response_proto = PortfolioSummaryResponse()
+        response_proto.ParseFromString(response.content)
+        return response_proto
+
+    # region: Prices
+    # https://api.fennel.com/docs#tag/Prices
+
+    @check_login
+    def get_latest_prices(self, symbols: list[str]) -> list[PriceResponse]:
+        """Get Latest Prices for a list of symbols: https://api.fennel.com/docs#tag/Prices/operation/latest_prices_markets_prices_latest_post.
+
+        Returns:
+            list[PriceResponse]: A list of latest prices for the specified symbols.
+
+        Raises:
+            FennelAPIError: If API call fails (doesn't return 200)
+
+        """
         search_response = self.session.post(
-            self.endpoints.graphql, headers=headers, data=query
+            url=self.endpoints.latest_prices_url(),
+            headers=self.headers,
+            data=MultiPriceRequest(symbols=symbols).SerializeToString(),
         )
-        if search_response.status_code != 200:
-            raise Exception(
-                f"Stock Search Request failed with status code {search_response.status_code}: {search_response.text}"
-            )
-        search_response = search_response.json()
-        securities = search_response["data"]["searchSearch"]["searchSecurities"]
-        if len(securities) == 0:
-            raise Exception(
-                f"No stock found with ticker {ticker}. Please check the app to see if it is valid."
-            )
-        stock_quote = next(
-            (
-                x
-                for x in securities
-                if x["security"]["ticker"].lower() == ticker.lower()
-            ),
-            None,
-        )
-        return stock_quote
+        if not search_response.ok:
+            msg = f"Stock Search Request failed with status code {search_response.status_code}: {search_response.text}"
+            raise FennelAPIError(msg)
+        search_response_proto = MultiPriceResponse()
+        search_response_proto.ParseFromString(search_response.content)
+        return list(search_response_proto.prices)
 
     @check_login
-    def get_stock_price(self, ticker):
-        quote = self.get_stock_quote(ticker)
-        return None if quote is None else quote["security"]["currentStockPrice"]
+    def get_prices_nbbo(self, symbol: str) -> NbboResponse:
+        """Get Latest NBBO Prices for a specific symbol: https://api.fennel.com/docs#tag/Prices/operation/nbbo_markets_price_nbbo_post.
 
-    @check_login
-    def get_stock_holdings(self, account_id):
-        query = self.endpoints.stock_holdings_query(account_id)
-        headers = self.endpoints.build_headers(self.Bearer)
+        Returns:
+            NbboResponse: The NBBO prices for the specified symbol.
+
+        Raises:
+            FennelAPIError: If API call fails (doesn't return 200)
+
+        """
         response = self.session.post(
-            self.endpoints.graphql, headers=headers, data=query
+            url=self.endpoints.get_prices_nbbo_url(),
+            headers=self.headers,
+            data=NbboRequest(symbol=symbol).SerializeToString(),
         )
-        if response.status_code != 200:
-            raise Exception(
-                f"Stock Holdings Request failed with status code {response.status_code}: {response.text}"
-            )
-        response = response.json()
-        return response["data"]["account"]["portfolio"]["bulbs"]
+        if not response.ok:
+            msg = f"NBBO Request failed with status code {response.status_code}: {response.text}"
+            raise FennelAPIError(msg)
+        response_proto = NbboResponse()
+        response_proto.ParseFromString(response.content)
+        return response_proto
+
+    # region: Orders
+    # https://api.fennel.com/docs#tag/Orders
 
     @check_login
-    def is_market_open(self):
-        query = self.endpoints.is_market_open_query()
-        headers = self.endpoints.build_headers(self.Bearer)
+    def list_orders(self, account_id: str, since_date: datetime) -> list[Order]:
+        """List all orders for a specific account: https://api.fennel.com/docs#tag/Orders/operation/list_orders_orders_list_post.
+
+        Returns:
+            list[Order]: A list of orders for the specified account.
+
+        Raises:
+            FennelAPIError: If API call fails (doesn't return 200)
+
+        """
         response = self.session.post(
-            self.endpoints.graphql, headers=headers, data=query
+            url=self.endpoints.list_orders_url(),
+            headers=self.headers,
+            data=ListOrdersRequest(account_id=account_id, since_date=since_date).SerializeToString(),
         )
-        if response.status_code != 200:
-            raise Exception(
-                f"Market Open Request failed with status code {response.status_code}: {response.text}"
-            )
-        response = response.json()
-        return response["data"]["securityMarketInfo"]["isOpen"]
+        if not response.ok:
+            msg = f"List Orders Request failed with status code {response.status_code}: {response.text}"
+            raise FennelAPIError(msg)
+        response_proto = ListOrdersResponse()
+        response_proto.ParseFromString(response.content)
+        return list(response_proto.orders)
 
     @check_login
-    def get_stock_isin(self, ticker):
-        quote = self.get_stock_quote(ticker)
-        return None if quote is None else quote["isin"]
+    def get_order(self, order_id: str) -> Order:
+        """Get details of a specific order: https://api.fennel.com/docs#tag/Orders/operation/get_order_orders_get.
 
-    @check_login
-    def is_stock_tradable(self, isin, account_id, side="buy"):
-        query = self.endpoints.is_tradable_query(isin, account_id)
-        headers = self.endpoints.build_headers(self.Bearer)
+        Returns:
+            Order: The order details.
+
+        Raises:
+            FennelAPIError: If API call fails (doesn't return 200)
+
+        """
         response = self.session.post(
-            self.endpoints.graphql, headers=headers, data=query
+            url=self.endpoints.get_order_url(),
+            headers=self.headers,
+            data=GetOrderRequest(order_id=order_id).SerializeToString(),
         )
-        if response.status_code != 200:
-            raise Exception(
-                f"Tradable Request failed with status code {response.status_code}: {response.text}"
-            )
-        response = response.json()
-        can_trade = response["data"]["bulbBulb"]["tradeable"]
-        if can_trade is None:
-            return False, "No tradeable data found"
-        if side.lower() == "buy":
-            return can_trade["canBuy"], can_trade["restrictionReason"]
-        return can_trade["canSell"], can_trade["restrictionReason"]
+        if not response.ok:
+            msg = f"Get Order Request failed with status code {response.status_code}: {response.text}"
+            raise FennelAPIError(msg)
+        response_proto = Order()
+        response_proto.ParseFromString(response.content)
+        return response_proto
 
     @check_login
-    def get_stock_info_from_holdings(self, account_id, ticker) -> dict | None:
-        holdings = self.get_stock_holdings(account_id)
-        stock_info = next(
-            (x for x in holdings if x["security"]["ticker"].lower() == ticker.lower()),
-            None,
+    def cancel_order(self, order_id: str) -> OrderResponse:
+        """Cancel a specific order: https://api.fennel.com/docs#tag/Orders/operation/cancel_order_orders_cancel_post.
+
+        Returns:
+            OrderResponse: The response from the API or an error message.
+
+        Raises:
+            FennelAPIError: If API call fails (doesn't return 200)
+
+        """
+        response = self.session.post(
+            url=self.endpoints.get_cancel_order_url(),
+            headers=self.headers,
+            data=CancelOrderRequest(order_id=order_id).SerializeToString(),
         )
-        return stock_info
+        if not response.ok:
+            msg = f"Cancel Order Request failed with status code {response.status_code}: {response.text}"
+            raise FennelAPIError(msg)
+        response_proto = OrderResponse()
+        response_proto.ParseFromString(response.content)
+        return response_proto
 
     @check_login
-    def place_order(
-        self, account_id, ticker, quantity, side, price="market", dry_run=False
-    ):
-        if side.lower() not in ["buy", "sell"]:
-            raise Exception("Side must be either 'buy' or 'sell'")
-        # Check if market is open
-        if not self.is_market_open():
-            raise Exception("Market is closed. Cannot place order.")
-        # Search for stock "isin"
-        isin = self.get_stock_isin(ticker)
-        if isin is None and side.lower() == "sell":
-            # Can't get from app search, try holdings
-            stock_info = self.get_stock_info_from_holdings(account_id, ticker)
-            if stock_info is not None:
-                isin = stock_info["isin"]
-        if isin is None:
-            raise Exception(f"Failed to find ISIN for stock with ticker {ticker}")
-        # Check if stock is tradable
-        can_trade, restriction_reason = self.is_stock_tradable(isin, account_id, side)
-        if not can_trade:
-            raise Exception(f"Stock {ticker} is not tradable: {restriction_reason}")
-        if dry_run:
-            return {
-                "account_id": account_id,
-                "ticker": ticker,
-                "quantity": quantity,
-                "isin": isin,
-                "side": side,
-                "price": price,
-                "dry_run_success": True,
-            }
-        # Place order
-        query = self.endpoints.stock_order_query(
-            account_id, ticker, quantity, isin, side, price
+    def place_order(  # noqa: PLR0913, PLR0917
+        self,
+        account_id: str,
+        symbol: str,
+        shares: float,
+        side: Literal["BUY", "SELL"],
+        order_type: Literal["MARKET", "LIMIT"] = "MARKET",
+        limit_price: float | None = None,
+        time_in_force: Literal["DAY"] = "DAY",
+        route: Literal["EXCHANGE", "EXCHANGE_ATS", "EXCHANGE_ATS_SDP", "QUIK"] = "EXCHANGE",
+    ) -> OrderResponse:
+        """Place an order for a specific account: https://api.fennel.com/docs#tag/Orders/operation/create_order_order_create_post.
+
+        Returns:
+            OrderResponse: The response from the API or an error message.
+
+        Raises:
+            FennelAPIError: If API call fails (doesn't return 200)
+            ValueError: If parameters are invalid.
+
+        """
+        # Verify parameters
+        if shares <= 0:
+            msg = "Shares must be greater than 0"
+            raise ValueError(msg)
+        if limit_price is not None and limit_price <= 0:
+            msg = "Limit price must be greater than 0"
+            raise ValueError(msg)
+        if order_type == "LIMIT" and limit_price is None:
+            msg = "Limit price must be provided for limit orders"
+            raise ValueError(msg)
+        # Validate side
+        try:
+            side_int = Side.Value(side)
+            side_enum = Side(side_int)
+        except ValueError as e:
+            msg = f'Invalid side: {side}. Must be "BUY" or "SELL".'
+            raise ValueError(msg) from e
+        # Validate order type
+        try:
+            order_type_int = OrderType.Value(order_type)
+            order_type_enum = OrderType(order_type_int)
+        except ValueError as e:
+            msg = f'Invalid order type: {order_type}. Must be "MARKET" or "LIMIT".'
+            raise ValueError(msg) from e
+        # Validate time in force
+        try:
+            time_in_force_int = TimeInForce.Value(time_in_force)
+            time_in_force_enum = TimeInForce(time_in_force_int)
+        except ValueError as e:
+            msg = f'Invalid time in force: {time_in_force}. Must be "DAY".'
+            raise ValueError(msg) from e
+        # Validate route
+        try:
+            route_int = RoutingOption.Value(route)
+            route_enum = RoutingOption(route_int)
+        except ValueError as e:
+            msg = f'Invalid route: {route}. Must be "EXCHANGE", "EXCHANGE_ATS", "EXCHANGE_ATS_SDP", or "QUIK".'
+            raise ValueError(msg) from e
+        # Create order
+        order_request = CreateOrderRequest(
+            account_id=account_id,
+            symbol=symbol,
+            shares=shares,
+            limit_price=limit_price,
+            side=side_enum,
+            type=order_type_enum,
+            time_in_force=time_in_force_enum,
+            route=route_enum,
         )
-        headers = self.endpoints.build_headers(self.Bearer)
         order_response = self.session.post(
-            self.endpoints.graphql, headers=headers, data=query
+            self.endpoints.get_create_order_url(),
+            headers=self.headers,
+            data=order_request.SerializeToString(),
         )
-        if order_response.status_code != 200:
-            raise Exception(
-                f"Order Request failed with status code {order_response.status_code}: {order_response.text}"
-            )
-        return order_response.json()
+        if not order_response.ok:
+            msg = f"Order Request failed with status code {order_response.status_code}: {order_response.text}"
+            raise FennelAPIError(msg)
+        order_response_proto = OrderResponse()
+        order_response_proto.ParseFromString(order_response.content)
+        return order_response_proto

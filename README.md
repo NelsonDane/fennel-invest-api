@@ -1,63 +1,56 @@
 # Unofficial Fennel Invest API
 
-This is an unofficial API for Fennel.com. It is a simple Python wrapper around the Fennel.com GraphQL API. It is not affiliated with Fennel.com in any way.
+This is an unofficial API for Fennel.com (now) built using the official [Fennel API](https://api.fennel.com/docs#tag/Welcome). This project is not affiliated with Fennel.com in any way.
 
-Fennel does everything via GraphQL, so yes, this is very slow.
-
-This is still a work in progress, so it will have bugs and missing features. Please feel free to contribute!
+While I try my best to ensure the API is working correctly, it is an ongoing work in progress, so it may have bugs and missing features. Please feel free to contribute!
 
 ## Important!
-Do not use any version of this library before 1.0.9. Earlier versions had a bug with placing certain orders that when executed excessively could lead to your account being locked. This has been fixed in 1.0.9. See [this issue](https://github.com/NelsonDane/fennel-invest-api/issues/14)
+Versions prior to `2.0.0` used an unofficial reverse-engineered API that mimicked the Fennel Invest mobile app. With the release of the official API, this library has been updated to use that instead and previous versions are no longer supported or recommended.
 
 ## Installation
+Install with [uv](https://github.com/astral-sh/uv):
 
 ```bash
-pip install 'fennel-invest-api>=1.1.0'
+uv add 'fennel-invest-api>=2.0.0'
+```
+
+Or with pip:
+```bash
+pip install 'fennel-invest-api>=2.0.0'
 ```
 
 ## Usage: Logging In
+Generate a new Personal Access Token (PAT) from the [Fennel Dashboard](https://dash.fennel.com/).
 
+Then, initialize the `Fennel` class with your `PAT`:
 ```python
 from fennel_invest_api import Fennel
 
-fennel = Fennel()
-fennel.login(
-    email="your-email@email.com",
-    wait_for_code=True # When logging in for the first time, you need to wait for email 2FA
-)
+fennel = Fennel(pat_token="your-personal-access-token")
 ```
 
-If you'd like to handle the 2FA yourself programmatically instead of waiting for `input()`, you can call it with `wait_for_code=False`, catch the 2FA exception, then call it again with the 2FA code:
-
+## Usage: Get Account Info
 ```python
-fennel.login(
-    email="your-email@email.com",
-    wait_for_code=False
-    code="123456" # Should be six-digit integer from email
-)
+account_info = fennel.get_account_info()
+for account in account_info:
+    print(f"Name: {account.name}, Account ID: {account.id}, Type: {account.account_type}")
 ```
 
 ## Usage: Get Stock Holdings
 ```python
-account_ids = fennel.get_account_ids()
-for account_id in account_ids:
-    print(account_id)
-    positions = fennel.get_stock_holdings(account_id)
+account_info = fennel.get_account_info()
+for account in account_info:
+    positions = fennel.get_portfolio_positions(account.id)
     for position in positions:
-        print(position)
+        print(f"{position.symbol}: {position.shares} shares at ${position.value}")
 ```
 
-## Usage: Get Portfolio
+## Usage: Get Account Summary
 ```python
-# For all account IDs
-portfolio = fennel.get_account_ids()
-for account_id in account_ids:
-    print(account_id)
-    portfolio = fennel.get_portfolio_summary(account_id)
-    print(portfolio)
-# For a single account ID
-portfolio = fennel.get_portfolio_summary(account_id)
-print(portfolio)
+account_info = fennel.get_account_info()
+for account in account_info:
+    summary = fennel.get_portfolio_cash_summary(account.id)
+    print(f"Account: {account.name}, Portfolio Value: ${summary.portfolio_value}, Buying Power: ${summary.buying_power}, Cash: ${summary.cash_available}")
 ```
 
 ## Usage: Placing Orders

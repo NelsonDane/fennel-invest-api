@@ -1,26 +1,31 @@
-# Public to PyPI
+# Publish to PyPI
 name: Publish to PyPI
 on:
   push:
-    branches:
-      - main
-    paths:
-      - "setup.py"
+    tags:
+      - "v*.*.*"
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     environment:
-      name: "pypi"
+      name: pypi
       url: https://pypi.org/p/fennel-invest-api
     permissions:
       id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build and Publish
-        uses: lsst-sqre/build-and-publish-to-pypi@v2
-        with:
-          python-version: "3.11"
-          upload: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        run: uv sync --all-groups
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+      - name: Protobuf Generation
+        run: make
+      - name: Build
+        run: uv build
+      - name: Publish
+        run: uv publish

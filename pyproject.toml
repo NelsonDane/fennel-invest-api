@@ -1,0 +1,42 @@
+[project]
+name = "fennel_invest_api"
+version = "2.0.0"
+description = "Unofficial Fennel.com Invest API written in Python Requests"
+readme = "README.md"
+authors = [
+    { name = "Nelson Dane" }
+]
+urls = { "Homepage" = "https://github.com/NelsonDane/fennel-invest-api" }
+
+requires-python = ">=3.9"
+dependencies = [
+    "protobuf>=6.30.0",
+    "requests",
+]
+
+
+[dependency-groups]
+dev = [
+    "fix-protobuf-imports>=0.1.7",
+    "mypy>=1.14.1",
+    "python-dotenv>=1.0.1",
+    "ruff>=0.13.2",
+    "types-requests>=2.32.0.20241016",
+]
+
+[tool.setuptools]
+py-modules = []
+
+[tool.ruff]
+target-version = "py310"
+extend = "./styles/ruff.toml"
+
+[tool.ruff.lint]
+exclude = ["fennel_invest_api/models/*", "test*"]
+
+[tool.mypy]
+exclude = "test*"
+
+[[tool.mypy.overrides]]
+module = "fennel_invest_api.models.*"
+ignore_errors = true
