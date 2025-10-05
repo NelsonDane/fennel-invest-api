@@ -12,7 +12,6 @@ all: fix
 setup:
 	@echo "Setting up directories..."
 	mkdir -p $(PROTO_DIR)
-	mkdir -p $(MODELS_DIR)
 	@if [ -f "$(PROTO_ZIP)" ]; then \
 		echo "Unzipping $(PROTO_ZIP) into $(PROTO_DIR)..."; \
 		unzip -o $(PROTO_ZIP) -d $(PROTO_DIR); \
@@ -33,7 +32,7 @@ generate: setup
 # Fix relative imports in generated protobuf files
 fix: generate
 	@echo "Fixing protobuf imports..."
-	fix-protobuf-imports $(MODELS_DIR)
+	uv run fix-protobuf-imports $(MODELS_DIR)
 	@echo "Import fix complete."
 
 # Clean generated code
