@@ -6,6 +6,8 @@ from typing import Concatenate, Literal, ParamSpec, TypeVar
 import requests
 
 from fennel_invest_api.endpoints import Endpoints
+
+# If these are all red/errored, run "make" to regenerate the protobuf files.
 from fennel_invest_api.models.account_id_pb2 import AccountIDRequest
 from fennel_invest_api.models.accounts_pb2 import Account, AccountsResponse
 from fennel_invest_api.models.cancel_order_pb2 import CancelOrderRequest
@@ -86,7 +88,7 @@ class Fennel:
             raise FennelAPIError(msg)
         response_proto = AccountsResponse()
         response_proto.ParseFromString(response.content)
-        return list(response_proto.accounts)
+        return sorted(response_proto.accounts, key=lambda x: x.name)
 
     # region: Portfolio
     # https://api.fennel.com/docs#tag/Portfolio
