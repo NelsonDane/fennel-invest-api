@@ -1,19 +1,22 @@
+# Project Setup
 [project]
 name = "fennel_invest_api"
 version = "2.0.0"
 description = "Unofficial Fennel.com Invest API written in Python Requests"
 readme = "README.md"
+license-files = ["LICENSE"]
 authors = [
     { name = "Nelson Dane" }
 ]
 urls = { "Homepage" = "https://github.com/NelsonDane/fennel-invest-api" }
 
-requires-python = ">=3.9"
+
+# Dependencies
+requires-python = ">=3.10"
 dependencies = [
     "protobuf>=6.30.0",
     "requests",
 ]
-
 
 [dependency-groups]
 dev = [
@@ -24,9 +27,18 @@ dev = [
     "types-requests>=2.32.0.20241016",
 ]
 
-[tool.setuptools]
-py-modules = []
 
+# Building
+[build-system]
+requires = ["setuptools>=80.9.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["fennel_invest_api"]
+include-package-data = true
+
+
+# Linting and Style
 [tool.ruff]
 target-version = "py310"
 extend = "./styles/ruff.toml"
