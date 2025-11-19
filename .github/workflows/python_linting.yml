@@ -19,7 +19,7 @@ jobs:
         with:
           submodules: recursive
       - name: Install uv
-        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3 # v7
       - name: Install requirements
         run: uv sync --all-groups
       - name: Install Protoc
