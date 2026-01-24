@@ -270,7 +270,7 @@ class Fennel:
         order_type: Literal["MARKET", "LIMIT"] = "MARKET",
         limit_price: float | None = None,
         time_in_force: Literal["DAY"] = "DAY",
-        route: Literal["EXCHANGE", "EXCHANGE_ATS", "EXCHANGE_ATS_SDP", "QUIK"] = "EXCHANGE",
+        route: Literal["EXCHANGE", "EXCHANGE_ATS", "EXCHANGE_ATS_SDP", "QUIK"] = "EXCHANGE_ATS_SDP",
     ) -> OrderResponse:
         """Place an order for a specific account: https://api.fennel.com/docs#tag/Orders/operation/create_order_order_create_post.
 
