@@ -1,7 +1,7 @@
 # Project Setup
 [project]
 name = "fennel_invest_api"
-version = "2.0.0"
+version = "2.0.1"
 description = "Unofficial Fennel.com Invest API written in Python Requests"
 readme = "README.md"
 license-files = ["LICENSE"]
