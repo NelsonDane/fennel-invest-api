@@ -15,7 +15,7 @@ from fennel_invest_api.models.create_order_pb2 import CreateOrderRequest
 from fennel_invest_api.models.get_order_pb2 import GetOrderRequest
 from fennel_invest_api.models.list_orders_pb2 import ListOrdersRequest, ListOrdersResponse, Order
 from fennel_invest_api.models.nbbo_pb2 import NbboRequest, NbboResponse
-from fennel_invest_api.models.order_details_pb2 import OrderType, RoutingOption, Side, TimeInForce
+from fennel_invest_api.models.order_details_pb2 import OrderType, QuantityType, RoutingOption, Side, TimeInForce
 from fennel_invest_api.models.order_response_pb2 import OrderResponse
 from fennel_invest_api.models.portfolio_summary_pb2 import PortfolioSummaryResponse
 from fennel_invest_api.models.positions_pb2 import Position, PositionsResponse
@@ -270,7 +270,7 @@ class Fennel:
         order_type: Literal["MARKET", "LIMIT"] = "MARKET",
         limit_price: float | None = None,
         time_in_force: Literal["DAY"] = "DAY",
-        route: Literal["EXCHANGE", "EXCHANGE_ATS", "EXCHANGE_ATS_SDP", "QUIK"] = "EXCHANGE_ATS_SDP",
+        route: Literal["EXCHANGE", "EXCHANGE_ATS", "EXCHANGE_ATS_SDP", "QUIK", "MANAGED"] = "EXCHANGE_ATS_SDP",
     ) -> OrderResponse:
         """Place an order for a specific account: https://api.fennel.com/docs#tag/Orders/operation/create_order_order_create_post.
 
@@ -318,13 +318,14 @@ class Fennel:
             route_int = RoutingOption.Value(route)
             route_enum = RoutingOption.Name(route_int)
         except ValueError as e:
-            msg = f'Invalid route: {route}. Must be "EXCHANGE", "EXCHANGE_ATS", "EXCHANGE_ATS_SDP", or "QUIK".'
+            msg = f'Invalid route: {route}. Must be "EXCHANGE", "EXCHANGE_ATS", "EXCHANGE_ATS_SDP", "QUIK", or "MANAGED".'
             raise ValueError(msg) from e
         # Create order
         order_request = CreateOrderRequest(
             account_id=account_id,
             symbol=symbol,
-            shares=shares,
+            quantity=shares,
+            quantity_type=QuantityType.SHARES,
             limit_price=limit_price,
             side=side_enum,
             type=order_type_enum,
