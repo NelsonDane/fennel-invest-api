@@ -261,7 +261,7 @@ class Fennel:
         return response_proto
 
     @check_login
-    def place_order(  # noqa: PLR0913, PLR0917
+    def place_order(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
         self,
         account_id: str,
         symbol: str,
