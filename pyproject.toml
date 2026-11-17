@@ -44,9 +44,7 @@ include-package-data = true
 [tool.ruff]
 target-version = "py310"
 extend = "./styles/ruff.toml"
-
-[tool.ruff.lint]
-exclude = ["fennel_invest_api/models/*", "test*"]
+exclude = ["fennel_invest_api/models/*", "test*", "README.md"]
 
 [tool.mypy]
 exclude = "test*"
